@@ -1,0 +1,180 @@
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio cache/options directory
+.vs/
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# Rider
+.idea/
+*.sln.iml
+
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Temporary files
+*.tmp
+*.temp
+*.tmp.*
+
+# NuGet Packages
+*.nupkg
+*.snupkg
+*.nuget.props
+*.nuget.targets
+.nuget/
+packages/
+.packages/
+paket-files/
+
+# ReSharper is a .NET coding add-in
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+
+# JetBrains Rider
+.idea/
+*.sln.iml
+
+# Test Results
+TestResults/
+*.trx
+
+# Coverage
+OpenCover/
+*.coverage
+*.coveragexml
+
+# Local history for Visual Studio Code
+.history/
+.ionide/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+appsettings.*.local.json
+
+# User secrets
+secrets.json
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+*.mdf
+*.ldf
+*.ndf
+
+# OS files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Built application files
+*.apk
+*.ap_
+
+# Generated files
+GeneratedCode/
+*.Generated.cs
+
+# ASP.NET Core
+wwwroot/node_modules/
+dist/
+build/
+
+# Profiling Files
+*.psess
+*.vsp
+*.vspx
+*.sap
+
+# dotCover
+.dotCover
+
+# CodeCoverage
+coverage/
+.coverage
+
+# StyleCop
+StyleCopReport.xml
+
+# Files built by Visual Studio
+*_i.c
+*_p.c
+*_h.h
+*.ilk
+*.meta
+*.obj
+*.iobj
+*.pch
+*.pdb
+*.ipdb
+*.pgc
+*.pgd
+*.rsp
+*.sbr
+*.tlb
+*.tli
+*.tlh
+*.tmp
+*.tmp_proj
+*_wpftmp.csproj
+*.log
+*.vspscc
+*.vssscc
+.builds
+*.pidb
+*.svclog
+*.scc
+
+# Visual Studio profiler
+*.psess
+*.vsp
+*.vspx
+*.sap
+
+# BlameCop results
+BlameReport/
+
+# Azure App Service generated files
+AppPackages/
+
+# Certificates
+*.pfx
+*.p12
+*.cer
+*.crt
+*.key
+
+# Miscellaneous
+bin/
+obj/
+dist/
+build/
+.vscode/
+.vs/
+node_modules/
+npm-debug.log
