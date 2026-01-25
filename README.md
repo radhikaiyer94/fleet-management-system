@@ -1,3 +1,4 @@
+
 # Fleet Management & Asset Finance System
 
 A comprehensive .NET 9.0 Web API for managing fleet vehicles and asset finance operations.
@@ -5,7 +6,7 @@ A comprehensive .NET 9.0 Web API for managing fleet vehicles and asset finance o
 ## Project Overview
 
 This project combines:
-- **Manufacturing Domain**: Vehicle tracking, maintenance scheduling
+- **Manufacturing Domain**: Vehicle tracking, Maintenance scheduling
 - **Asset Finance Domain**: Leasing, Financing, Asset valuation, Depriciation
 
 ## Tech Stack
@@ -18,7 +19,7 @@ This project combines:
 - RESTful API
 
 ## Project Structure
-
+```
 FleetManagementApi/
 ├── Controllers/    # API Controllers
 ├── Data/           # DbContext and Data Access
@@ -27,3 +28,4 @@ FleetManagementApi/
 ├── DTOs/           # Data Transfer Objects
 ├── Repositories/   # Repository Pattern Implementation
 └── Migrations/     # Database migrations
+```
