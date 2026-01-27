@@ -10,8 +10,8 @@ namespace FleetManagementApi.Domain.Entities
         public string? Email { get; set; }
         public required string PhoneNumber { get; set; }
         public required string LicenseNumber { get; set; }
-        public required string LicenseExpiryDate { get; set; }
-        public required string DateOfEmployment { get; set; }
+        public required DateTime LicenseExpiryDate { get; set; }
+        public required DateTime DateOfEmployment { get; set; }
         public DriverStatus Status { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }

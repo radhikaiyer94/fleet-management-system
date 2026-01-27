@@ -28,11 +28,27 @@ builder.Services.AddSwaggerGen(c =>
 // ============================================================================
 // Database Configuration - Entity Framework Core
 // ============================================================================
-// Register FleetDbContext with In-Memory database provider
+// Register FleetDbContext with PostgreSQL database provider
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
+    ?? "Host=localhost;Port=5432;Database=FleetManagementDb;Username=postgres;Password=postgres;";
+
 builder.Services.AddDbContext<FleetDbContext>(options =>
-    options.UseInMemoryDatabase("FleetManagementDb"));  // Database name (used internally)
+    options.UseNpgsql(connectionString));
 
 var app = builder.Build();
+
+// ============================================================================
+// Database Initialization - Seed Sample Data
+// ============================================================================
+// Create a scope to access the DbContext and seed initial data
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    var context = services.GetRequiredService<FleetDbContext>();
+    
+    // Seed sample data into the database (idempotent - won't duplicate data)
+    SeedData.Initialize(context);
+}
 
 // ============================================================================
 // HTTP Request Pipeline Configuration
