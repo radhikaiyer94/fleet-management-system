@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using FleetManagementApi.Data;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,7 +9,14 @@ var builder = WebApplication.CreateBuilder(args);
 // ============================================================================
 
 // Register API controllers for handling HTTP requests
-builder.Services.AddControllers();
+// Configure JSON serialization to handle circular references in navigation properties
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Ignore circular references (e.g., Vehicle -> MaintenanceRecords -> Vehicle -> ...)
+        // This prevents infinite loops during JSON serialization of EF Core entities
+        options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+    });
 
 // Enable API endpoint exploration for Swagger documentation
 builder.Services.AddEndpointsApiExplorer();
@@ -38,14 +46,18 @@ builder.Services.AddDbContext<FleetDbContext>(options =>
 var app = builder.Build();
 
 // ============================================================================
-// Database Initialization - Seed Sample Data
+// Database Initialization - Run Migrations and Seed Data
 // ============================================================================
-// Create a scope to access the DbContext and seed initial data
+// Create a scope to access the DbContext
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     var context = services.GetRequiredService<FleetDbContext>();
-    
+
+    // Run pending EF Core migrations (e.g. create/update tables for UUID schema)
+    // Safe to call on every startup: applies only migrations that have not been applied yet
+    context.Database.Migrate();
+
     // Seed sample data into the database (idempotent - won't duplicate data)
     SeedData.Initialize(context);
 }

@@ -4,9 +4,9 @@ namespace FleetManagementApi.Domain.Entities
 {
     public class Assignment
     {
-        public int Id { get; set; }
-        public required int VehicleId { get; set; }
-        public required int DriverId { get; set; }
+        public Guid Id { get; set; }
+        public required Guid VehicleId { get; set; }
+        public required Guid DriverId { get; set; }
         public required DateTime StartDate { get; set; }
         public required DateTime EndDate { get; set; }
         public AssignmentStatus Status { get; set; }

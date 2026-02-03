@@ -31,6 +31,7 @@ public static class SeedData
         {
             new Vehicle
             {
+                Id = Guid.NewGuid(),
                 Make = "Toyota",
                 Model = "Camry",
                 Year = 2022,
@@ -44,6 +45,7 @@ public static class SeedData
             },
             new Vehicle
             {
+                Id = Guid.NewGuid(),
                 Make = "Ford",
                 Model = "F-150",
                 Year = 2021,
@@ -57,6 +59,7 @@ public static class SeedData
             },
             new Vehicle
             {
+                Id = Guid.NewGuid(),
                 Make = "Honda",
                 Model = "Civic",
                 Year = 2023,
@@ -70,6 +73,7 @@ public static class SeedData
             },
             new Vehicle
             {
+                Id = Guid.NewGuid(),
                 Make = "Chevrolet",
                 Model = "Silverado",
                 Year = 2020,
@@ -93,6 +97,7 @@ public static class SeedData
         {
             new Driver
             {
+                Id = Guid.NewGuid(),
                 FirstName = "John",
                 LastName = "Smith",
                 Email = "john.smith@fleet.com",
@@ -105,6 +110,7 @@ public static class SeedData
             },
             new Driver
             {
+                Id = Guid.NewGuid(),
                 FirstName = "Sarah",
                 LastName = "Johnson",
                 Email = "sarah.johnson@fleet.com",
@@ -117,6 +123,7 @@ public static class SeedData
             },
             new Driver
             {
+                Id = Guid.NewGuid(),
                 FirstName = "Michael",
                 LastName = "Brown",
                 Email = "michael.brown@fleet.com",
@@ -129,6 +136,7 @@ public static class SeedData
             },
             new Driver
             {
+                Id = Guid.NewGuid(),
                 FirstName = "Emily",
                 LastName = "Davis",
                 Email = "emily.davis@fleet.com",
@@ -151,6 +159,7 @@ public static class SeedData
         {
             new MaintenanceRecord
             {
+                Id = Guid.NewGuid(),
                 VehicleId = vehicles[0].Id,
                 MaintenanceType = MaintenanceType.OilChange,
                 Description = "Regular oil change and filter replacement",
@@ -161,6 +170,7 @@ public static class SeedData
             },
             new MaintenanceRecord
             {
+                Id = Guid.NewGuid(),
                 VehicleId = vehicles[1].Id,
                 MaintenanceType = MaintenanceType.TireReplacement,
                 Description = "Replaced two tires and checked alignment",
@@ -171,6 +181,7 @@ public static class SeedData
             },
             new MaintenanceRecord
             {
+                Id = Guid.NewGuid(),
                 VehicleId = vehicles[3].Id,
                 MaintenanceType = MaintenanceType.BrakeService,
                 Description = "Replaced brake pads and rotors",
@@ -191,6 +202,7 @@ public static class SeedData
         {
             new Assignment
             {
+                Id = Guid.NewGuid(),
                 VehicleId = vehicles[0].Id,
                 DriverId = drivers[0].Id,
                 StartDate = DateTime.UtcNow.AddDays(-60),
@@ -201,6 +213,7 @@ public static class SeedData
             },
             new Assignment
             {
+                Id = Guid.NewGuid(),
                 VehicleId = vehicles[1].Id,
                 DriverId = drivers[1].Id,
                 StartDate = DateTime.UtcNow.AddDays(-45),
@@ -211,6 +224,7 @@ public static class SeedData
             },
             new Assignment
             {
+                Id = Guid.NewGuid(),
                 VehicleId = vehicles[2].Id,
                 DriverId = drivers[2].Id,
                 StartDate = DateTime.UtcNow.AddDays(-4),
@@ -221,6 +235,7 @@ public static class SeedData
             },
             new Assignment
             {
+                Id = Guid.NewGuid(),
                 VehicleId = vehicles[2].Id,
                 DriverId = drivers[0].Id,
                 StartDate = DateTime.UtcNow.AddDays(-20),
@@ -231,6 +246,7 @@ public static class SeedData
             },
             new Assignment
             {
+                Id = Guid.NewGuid(),
                 VehicleId = vehicles[3].Id,
                 DriverId = drivers[1].Id,
                 StartDate = DateTime.UtcNow.AddDays(-10),

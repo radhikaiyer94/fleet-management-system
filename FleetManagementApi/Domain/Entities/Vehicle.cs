@@ -4,7 +4,7 @@ namespace FleetManagementApi.Domain.Entities
 {
     public class Vehicle
     {
-        public int Id { get; set; }
+        public Guid Id { get; set; }
         public required string Make { get; set; }
 
         public required string Model { get; set; }

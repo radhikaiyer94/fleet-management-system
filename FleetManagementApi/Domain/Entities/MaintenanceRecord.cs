@@ -4,9 +4,9 @@ namespace FleetManagementApi.Domain.Entities
 {
     public class MaintenanceRecord
     {
-        public int Id { get; set; }
+        public Guid Id { get; set; }
 
-        public required int VehicleId { get; set; }
+        public required Guid VehicleId { get; set; }
 
         public MaintenanceType MaintenanceType { get; set; }
 
