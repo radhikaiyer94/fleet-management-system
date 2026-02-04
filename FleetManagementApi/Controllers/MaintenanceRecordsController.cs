@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using FleetManagementApi.Data;
 using FleetManagementApi.Domain.Entities;
+using FleetManagementApi.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace FleetManagementApi.Controllers;
 
@@ -16,24 +18,58 @@ public class MaintenanceRecordsController : ControllerBase
     }
 
     [HttpGet]
-    public IActionResult GetMaintenanceRecords()
+    public async Task<IActionResult> GetMaintenanceRecordsAsync([FromQuery] GetMaintenanceRecordsQuery q, CancellationToken cancellationToken = default)
     {
-        var records = _dbContext.MaintenanceRecords.Where(record => !record.IsDeleted).ToList();
+        var query = _dbContext.MaintenanceRecords.Where(r => !r.IsDeleted);
+
+        if (!string.IsNullOrWhiteSpace(q.Search))
+        {
+            var term = q.Search.Trim().ToLower();
+            query = query.Where(r =>
+                (r.Description != null && r.Description.ToLower().Contains(term)) ||
+                (r.ServiceProvider != null && r.ServiceProvider.ToLower().Contains(term)));
+        }
+        if (q.VehicleId.HasValue)
+            query = query.Where(r => r.VehicleId == q.VehicleId.Value);
+        if (q.Type.HasValue)
+            query = query.Where(r => r.MaintenanceType == q.Type.Value);
+
+        if (!string.IsNullOrWhiteSpace(q.SortBy))
+        {
+            var sortByLower = q.SortBy.Trim().ToLower();
+            var desc = string.Equals(q.SortOrder?.Trim(), "desc", StringComparison.OrdinalIgnoreCase);
+            query = sortByLower switch
+            {
+                "id" => desc ? query.OrderByDescending(r => r.Id) : query.OrderBy(r => r.Id),
+                "vehicleid" => desc ? query.OrderByDescending(r => r.VehicleId) : query.OrderBy(r => r.VehicleId),
+                "maintenancetype" => desc ? query.OrderByDescending(r => r.MaintenanceType) : query.OrderBy(r => r.MaintenanceType),
+                "cost" => desc ? query.OrderByDescending(r => r.Cost) : query.OrderBy(r => r.Cost),
+                "servicedate" => desc ? query.OrderByDescending(r => r.ServiceDate) : query.OrderBy(r => r.ServiceDate),
+                "createdat" => desc ? query.OrderByDescending(r => r.CreatedAt) : query.OrderBy(r => r.CreatedAt),
+                _ => query.OrderBy(r => r.Id)
+            };
+        }
+        else
+            query = query.OrderBy(r => r.Id);
+
+        if (q.Page > 0 && q.PageSize > 0)
+            query = query.Skip((q.Page - 1) * q.PageSize).Take(q.PageSize);
+
+        var records = await query.ToListAsync(cancellationToken);
         return Ok(records);
     }
 
     [HttpGet("{id}")]
-    public IActionResult GetMaintenanceRecord(Guid id)
+    public async Task<IActionResult> GetMaintenanceRecordAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var record = _dbContext.MaintenanceRecords.Where(r => !r.IsDeleted).FirstOrDefault(r => r.Id == id);
+        var record = await _dbContext.MaintenanceRecords.FirstOrDefaultAsync(r => !r.IsDeleted && r.Id == id, cancellationToken);
         return record != null ? Ok(record) : NotFound(new { message = "Maintenance record not found." });
     }
 
     [HttpPost]
-    public IActionResult CreateMaintenanceRecord([FromBody] MaintenanceRecord record)
+    public async Task<IActionResult> CreateMaintenanceRecordAsync([FromBody] MaintenanceRecord record, CancellationToken cancellationToken = default)
     {
-        // Validate that the vehicle exists
-        var vehicleExists = _dbContext.Vehicles.Any(v => v.Id == record.VehicleId && !v.IsDeleted);
+        var vehicleExists = await _dbContext.Vehicles.AnyAsync(v => v.Id == record.VehicleId && !v.IsDeleted, cancellationToken);
         if (!vehicleExists)
         {
             return BadRequest(new { message = "Vehicle not found." });
@@ -43,30 +79,29 @@ public class MaintenanceRecordsController : ControllerBase
         record.CreatedAt = DateTime.UtcNow;
         record.UpdatedAt = DateTime.UtcNow;
 
-        _dbContext.MaintenanceRecords.Add(record);
-        _dbContext.SaveChanges();
+        await _dbContext.MaintenanceRecords.AddAsync(record, cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return CreatedAtAction(nameof(GetMaintenanceRecord), new { id = record.Id }, record);
+        return CreatedAtAction(nameof(GetMaintenanceRecordAsync), new { id = record.Id }, record);
     }
 
     [HttpPut("{id}")]
-    public IActionResult UpdateMaintenanceRecord(Guid id, [FromBody] MaintenanceRecord record)
+    public async Task<IActionResult> UpdateMaintenanceRecordAsync(Guid id, [FromBody] MaintenanceRecord record, CancellationToken cancellationToken = default)
     {
         if (id != record.Id)
         {
             return BadRequest(new { message = "Maintenance record ID mismatch." });
         }
 
-        var existingRecord = _dbContext.MaintenanceRecords.Where(r => !r.IsDeleted).FirstOrDefault(r => r.Id == id);
+        var existingRecord = await _dbContext.MaintenanceRecords.FirstOrDefaultAsync(r => !r.IsDeleted && r.Id == id, cancellationToken);
         if (existingRecord == null)
         {
             return NotFound(new { message = "Maintenance record not found." });
         }
 
-        // Validate vehicle if VehicleId is changing
         if (record.VehicleId != existingRecord.VehicleId)
         {
-            var vehicleExists = _dbContext.Vehicles.Any(v => v.Id == record.VehicleId && !v.IsDeleted);
+            var vehicleExists = await _dbContext.Vehicles.AnyAsync(v => v.Id == record.VehicleId && !v.IsDeleted, cancellationToken);
             if (!vehicleExists)
             {
                 return BadRequest(new { message = "Vehicle not found." });
@@ -82,15 +117,15 @@ public class MaintenanceRecordsController : ControllerBase
         existingRecord.NextServiceDueDate = record.NextServiceDueDate;
         existingRecord.UpdatedAt = DateTime.UtcNow;
 
-        _dbContext.SaveChanges();
+        await _dbContext.SaveChangesAsync(cancellationToken);
 
         return NoContent();
     }
 
     [HttpDelete("{id}")]
-    public IActionResult DeleteMaintenanceRecord(Guid id)
+    public async Task<IActionResult> DeleteMaintenanceRecordAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var existingRecord = _dbContext.MaintenanceRecords.Where(r => !r.IsDeleted).FirstOrDefault(r => r.Id == id);
+        var existingRecord = await _dbContext.MaintenanceRecords.FirstOrDefaultAsync(r => !r.IsDeleted && r.Id == id, cancellationToken);
         if (existingRecord == null)
         {
             return NotFound(new { message = "Maintenance record not found." });
@@ -99,7 +134,7 @@ public class MaintenanceRecordsController : ControllerBase
         existingRecord.IsDeleted = true;
         existingRecord.UpdatedAt = DateTime.UtcNow;
 
-        _dbContext.SaveChanges();
+        await _dbContext.SaveChangesAsync(cancellationToken);
 
         return NoContent();
     }

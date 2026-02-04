@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using FleetManagementApi.Data;
 using FleetManagementApi.Domain.Entities;
 using FleetManagementApi.Domain.Enums;
+using FleetManagementApi.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace FleetManagementApi.Controllers;
 
@@ -17,46 +19,80 @@ public class AssignmentsController : ControllerBase
     }
 
     [HttpGet]
-    public IActionResult GetAssignments()
+    public async Task<IActionResult> GetAssignmentsAsync([FromQuery] GetAssignmentsQuery q, CancellationToken cancellationToken = default)
     {
-        var assignments = _dbContext.Assignments.Where(assignment => !assignment.IsDeleted).ToList();
+        var query = _dbContext.Assignments.Where(a => !a.IsDeleted);
+
+        if (!string.IsNullOrWhiteSpace(q.Search))
+        {
+            var term = q.Search.Trim().ToLower();
+            query = query.Where(a => a.Notes != null && a.Notes.ToLower().Contains(term));
+        }
+        if (q.VehicleId.HasValue)
+            query = query.Where(a => a.VehicleId == q.VehicleId.Value);
+        if (q.DriverId.HasValue)
+            query = query.Where(a => a.DriverId == q.DriverId.Value);
+        if (q.Status.HasValue)
+            query = query.Where(a => a.Status == q.Status.Value);
+
+        if (!string.IsNullOrWhiteSpace(q.SortBy))
+        {
+            var sortByLower = q.SortBy.Trim().ToLower();
+            var desc = string.Equals(q.SortOrder?.Trim(), "desc", StringComparison.OrdinalIgnoreCase);
+            query = sortByLower switch
+            {
+                "id" => desc ? query.OrderByDescending(a => a.Id) : query.OrderBy(a => a.Id),
+                "vehicleid" => desc ? query.OrderByDescending(a => a.VehicleId) : query.OrderBy(a => a.VehicleId),
+                "driverid" => desc ? query.OrderByDescending(a => a.DriverId) : query.OrderBy(a => a.DriverId),
+                "startdate" => desc ? query.OrderByDescending(a => a.StartDate) : query.OrderBy(a => a.StartDate),
+                "enddate" => desc ? query.OrderByDescending(a => a.EndDate) : query.OrderBy(a => a.EndDate),
+                "status" => desc ? query.OrderByDescending(a => a.Status) : query.OrderBy(a => a.Status),
+                "createdat" => desc ? query.OrderByDescending(a => a.CreatedAt) : query.OrderBy(a => a.CreatedAt),
+                _ => query.OrderBy(a => a.Id)
+            };
+        }
+        else
+            query = query.OrderBy(a => a.Id);
+
+        if (q.Page > 0 && q.PageSize > 0)
+            query = query.Skip((q.Page - 1) * q.PageSize).Take(q.PageSize);
+
+        var assignments = await query.ToListAsync(cancellationToken);
         return Ok(assignments);
     }
 
     [HttpGet("active")]
-    public IActionResult GetActiveAssignments()
+    public async Task<IActionResult> GetActiveAssignmentsAsync(CancellationToken cancellationToken = default)
     {
-        var activeAssignments = _dbContext.Assignments
-            .Where(assignment => !assignment.IsDeleted && assignment.Status == AssignmentStatus.Active)
-            .ToList();
+        var activeAssignments = await _dbContext.Assignments
+            .Where(a => !a.IsDeleted && a.Status == AssignmentStatus.Active)
+            .ToListAsync(cancellationToken);
         return Ok(activeAssignments);
     }
 
     [HttpGet("{id}")]
-    public IActionResult GetAssignment(Guid id)
+    public async Task<IActionResult> GetAssignmentAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var assignment = _dbContext.Assignments.Where(a => !a.IsDeleted).FirstOrDefault(a => a.Id == id);
+        var assignment = await _dbContext.Assignments.FirstOrDefaultAsync(a => !a.IsDeleted && a.Id == id, cancellationToken);
         return assignment != null ? Ok(assignment) : NotFound(new { message = "Assignment not found." });
     }
 
     [HttpPost]
-    public IActionResult CreateAssignment([FromBody] Assignment assignment)
+    public async Task<IActionResult> CreateAssignmentAsync([FromBody] Assignment assignment, CancellationToken cancellationToken = default)
     {
-        // Validate that the vehicle exists
-        var vehicleExists = _dbContext.Vehicles.Any(v => v.Id == assignment.VehicleId && !v.IsDeleted);
+        var vehicleExists = await _dbContext.Vehicles.AnyAsync(v => v.Id == assignment.VehicleId && !v.IsDeleted, cancellationToken);
         if (!vehicleExists)
         {
             return BadRequest(new { message = "Vehicle not found." });
         }
 
-        // Validate that the driver exists
-        var driverExists = _dbContext.Drivers.Any(d => d.Id == assignment.DriverId && !d.IsDeleted);
+        var driverExists = await _dbContext.Drivers.AnyAsync(d => d.Id == assignment.DriverId && !d.IsDeleted, cancellationToken);
         if (!driverExists)
         {
             return BadRequest(new { message = "Driver not found." });
         }
 
-        var errors = ValidateAssignment(assignment);
+        var errors = await ValidateAssignmentAsync(assignment, null, cancellationToken);
         if (errors.Count > 0)
         {
             return BadRequest(new { message = string.Join(", ", errors) });
@@ -66,27 +102,27 @@ public class AssignmentsController : ControllerBase
         assignment.CreatedAt = DateTime.UtcNow;
         assignment.UpdatedAt = DateTime.UtcNow;
 
-        _dbContext.Assignments.Add(assignment);
-        _dbContext.SaveChanges();
+        await _dbContext.Assignments.AddAsync(assignment, cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return CreatedAtAction(nameof(GetAssignment), new { id = assignment.Id }, assignment);
+        return CreatedAtAction(nameof(GetAssignmentAsync), new { id = assignment.Id }, assignment);
     }
 
     [HttpPut("{id}")]
-    public IActionResult UpdateAssignment(Guid id, [FromBody] Assignment assignment)
+    public async Task<IActionResult> UpdateAssignmentAsync(Guid id, [FromBody] Assignment assignment, CancellationToken cancellationToken = default)
     {
         if (id != assignment.Id)
         {
             return BadRequest(new { message = "Assignment ID mismatch." });
         }
 
-        var existingAssignment = _dbContext.Assignments.Where(a => !a.IsDeleted).FirstOrDefault(a => a.Id == id);
+        var existingAssignment = await _dbContext.Assignments.FirstOrDefaultAsync(a => !a.IsDeleted && a.Id == id, cancellationToken);
         if (existingAssignment == null)
         {
             return NotFound(new { message = "Assignment not found." });
         }
 
-        var errors = ValidateAssignment(assignment, existingAssignment);
+        var errors = await ValidateAssignmentAsync(assignment, existingAssignment, cancellationToken);
         if (errors.Count > 0)
         {
             return BadRequest(new { message = string.Join(", ", errors) });
@@ -100,15 +136,15 @@ public class AssignmentsController : ControllerBase
         existingAssignment.Notes = assignment.Notes;
         existingAssignment.UpdatedAt = DateTime.UtcNow;
 
-        _dbContext.SaveChanges();
+        await _dbContext.SaveChangesAsync(cancellationToken);
 
         return NoContent();
     }
 
     [HttpPatch("{id}/complete")]
-    public IActionResult CompleteAssignment(Guid id)
+    public async Task<IActionResult> CompleteAssignmentAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var assignment = _dbContext.Assignments.Where(a => !a.IsDeleted).FirstOrDefault(a => a.Id == id);
+        var assignment = await _dbContext.Assignments.FirstOrDefaultAsync(a => !a.IsDeleted && a.Id == id, cancellationToken);
         if (assignment == null)
         {
             return NotFound(new { message = "Assignment not found." });
@@ -118,15 +154,15 @@ public class AssignmentsController : ControllerBase
         assignment.EndDate = DateTime.UtcNow;
         assignment.UpdatedAt = DateTime.UtcNow;
 
-        _dbContext.SaveChanges();
+        await _dbContext.SaveChangesAsync(cancellationToken);
 
         return Ok(assignment);
     }
 
     [HttpPatch("{id}/cancel")]
-    public IActionResult CancelAssignment(Guid id)
+    public async Task<IActionResult> CancelAssignmentAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var assignment = _dbContext.Assignments.Where(a => !a.IsDeleted).FirstOrDefault(a => a.Id == id);
+        var assignment = await _dbContext.Assignments.FirstOrDefaultAsync(a => !a.IsDeleted && a.Id == id, cancellationToken);
         if (assignment == null)
         {
             return NotFound(new { message = "Assignment not found." });
@@ -135,15 +171,15 @@ public class AssignmentsController : ControllerBase
         assignment.Status = AssignmentStatus.Cancelled;
         assignment.UpdatedAt = DateTime.UtcNow;
 
-        _dbContext.SaveChanges();
+        await _dbContext.SaveChangesAsync(cancellationToken);
 
         return Ok(assignment);
     }
 
     [HttpDelete("{id}")]
-    public IActionResult DeleteAssignment(Guid id)
+    public async Task<IActionResult> DeleteAssignmentAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var existingAssignment = _dbContext.Assignments.Where(a => !a.IsDeleted).FirstOrDefault(a => a.Id == id);
+        var existingAssignment = await _dbContext.Assignments.FirstOrDefaultAsync(a => !a.IsDeleted && a.Id == id, cancellationToken);
         if (existingAssignment == null)
         {
             return NotFound(new { message = "Assignment not found." });
@@ -152,16 +188,15 @@ public class AssignmentsController : ControllerBase
         existingAssignment.IsDeleted = true;
         existingAssignment.UpdatedAt = DateTime.UtcNow;
 
-        _dbContext.SaveChanges();
+        await _dbContext.SaveChangesAsync(cancellationToken);
 
         return NoContent();
     }
 
-    private List<string> ValidateAssignment(Assignment assignment, Assignment? existingAssignment = null)
+    private async Task<List<string>> ValidateAssignmentAsync(Assignment assignment, Assignment? existingAssignment, CancellationToken cancellationToken)
     {
-        List<string> errors = new List<string>();
+        var errors = new List<string>();
 
-        // Validate start and end date
         if (assignment.StartDate > assignment.EndDate)
         {
             errors.Add("Start date cannot be after end date.");
@@ -177,36 +212,32 @@ public class AssignmentsController : ControllerBase
             errors.Add("End date cannot be in the past.");
         }
 
-        // Business Rule: Check if vehicle already has an active assignment
-        var vehicleHasActiveAssignment = _dbContext.Assignments
-            .Any(a => a.VehicleId == assignment.VehicleId && a.Status == AssignmentStatus.Active && !a.IsDeleted && (existingAssignment == null || a.Id != existingAssignment.Id));
+        var vehicleHasActiveAssignment = await _dbContext.Assignments
+            .AnyAsync(a => a.VehicleId == assignment.VehicleId && a.Status == AssignmentStatus.Active && !a.IsDeleted && (existingAssignment == null || a.Id != existingAssignment.Id), cancellationToken);
         if (vehicleHasActiveAssignment)
         {
             errors.Add("Vehicle already has an active assignment.");
         }
 
-        // Business Rule: Check if driver already has an active assignment
-        var driverHasActiveAssignment = _dbContext.Assignments
-            .Any(a => a.DriverId == assignment.DriverId && a.Status == AssignmentStatus.Active && !a.IsDeleted && (existingAssignment == null || a.Id != existingAssignment.Id));
+        var driverHasActiveAssignment = await _dbContext.Assignments
+            .AnyAsync(a => a.DriverId == assignment.DriverId && a.Status == AssignmentStatus.Active && !a.IsDeleted && (existingAssignment == null || a.Id != existingAssignment.Id), cancellationToken);
         if (driverHasActiveAssignment)
         {
             errors.Add("Driver already has an active assignment.");
         }
 
-        // Validate vehicle if VehicleId is changing
         if (existingAssignment != null && assignment.VehicleId != existingAssignment.VehicleId)
         {
-            var vehicleExists = _dbContext.Vehicles.Any(v => v.Id == assignment.VehicleId && !v.IsDeleted);
+            var vehicleExists = await _dbContext.Vehicles.AnyAsync(v => v.Id == assignment.VehicleId && !v.IsDeleted, cancellationToken);
             if (!vehicleExists)
             {
                 errors.Add("Vehicle not found.");
             }
         }
 
-        // Validate driver if DriverId is changing
         if (existingAssignment != null && assignment.DriverId != existingAssignment.DriverId)
         {
-            var driverExists = _dbContext.Drivers.Any(d => d.Id == assignment.DriverId && !d.IsDeleted);
+            var driverExists = await _dbContext.Drivers.AnyAsync(d => d.Id == assignment.DriverId && !d.IsDeleted, cancellationToken);
             if (!driverExists)
             {
                 errors.Add("Driver not found.");
