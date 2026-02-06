@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using FleetManagementApi.Data;
 using FleetManagementApi.Domain.Entities;
-using FleetManagementApi.Domain.Enums;
+using FleetManagementApi.Exceptions;
 using FleetManagementApi.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -92,7 +92,10 @@ public class VehiclesController : ControllerBase
     public async Task<IActionResult> GetVehicleAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var vehicle = await _dbContext.Vehicles.FirstOrDefaultAsync(v => !v.IsDeleted && v.Id == id, cancellationToken);
-        return vehicle != null ? Ok(vehicle) : NotFound(new { message = "Vehicle not found."});
+        if (vehicle == null)
+            throw new NotFoundException("Vehicle not found.");
+
+        return Ok(vehicle);
     }
 
     [HttpGet("{id}/maintenance-records")]
@@ -101,11 +104,13 @@ public class VehiclesController : ControllerBase
         var existingVehicle = await _dbContext.Vehicles.FirstOrDefaultAsync(v => !v.IsDeleted && v.Id == id, cancellationToken);
         if (existingVehicle == null)
         {
-            return NotFound(new { message = "Vehicle not found."});
+            throw new NotFoundException("Vehicle not found.");
         }
 
         var maintenanceRecords = await _dbContext.MaintenanceRecords.Where(r => !r.IsDeleted && r.VehicleId == id).ToListAsync(cancellationToken);
-        return maintenanceRecords.Count > 0 ? Ok(maintenanceRecords) : NotFound(new { message = "No maintenance records found for this vehicle."});
+        if (maintenanceRecords.Count == 0)
+            throw new NotFoundException("No maintenance records found for this vehicle.");
+        return Ok(maintenanceRecords);
     }
 
     [HttpGet("{id}/assignments")]
@@ -114,16 +119,26 @@ public class VehiclesController : ControllerBase
         var existingVehicle = await _dbContext.Vehicles.FirstOrDefaultAsync(v =>!v.IsDeleted &&  v.Id == id, cancellationToken);
         if (existingVehicle == null)
         {   
-            return NotFound(new { message = "Vehicle not found."});
+            throw new NotFoundException("Vehicle not found.");
         }
         var assignments = await _dbContext.Assignments.Where(a => !a.IsDeleted && a.VehicleId == id).ToListAsync(cancellationToken);
-        return assignments.Count > 0 ? Ok(assignments) : NotFound(new { message = "No assignments found for this vehicle."});
+        if (assignments.Count == 0)
+            throw new NotFoundException("No assignments found for this vehicle.");
+        return Ok(assignments);
 
     }
 
     [HttpPost]
     public async Task<IActionResult> CreateVehicleAsync([FromBody] Vehicle vehicle, CancellationToken cancellationToken = default)
     {
+        if (!ModelState.IsValid)
+        {
+            var errorList = ModelState
+                .Where(ms => ms.Value?.Errors?.Count > 0)
+                .SelectMany(ms => ms.Value!.Errors.Select(e => $"{ms.Key}: {e.ErrorMessage}"));
+            string errors = string.Join("; ", errorList.Where(m => !string.IsNullOrWhiteSpace(m)));
+            throw new BadRequestException(errors);
+        }
         if (vehicle.Id == default) vehicle.Id = Guid.NewGuid();
         vehicle.CreatedAt = DateTime.UtcNow;
         vehicle.UpdatedAt = DateTime.UtcNow;
@@ -137,15 +152,31 @@ public class VehiclesController : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateVehicleAsync(Guid id, [FromBody] Vehicle vehicle, CancellationToken cancellationToken = default)
     {
+        if (!ModelState.IsValid)
+        {
+            var errorList = ModelState
+                .Where(ms => ms.Value?.Errors?.Count > 0)
+                .SelectMany(ms => ms.Value!.Errors.Select(e => $"{ms.Key}: {e.ErrorMessage}"));
+            string errors = string.Join("; ", errorList.Where(m => !string.IsNullOrWhiteSpace(m)));
+            Console.WriteLine(errors);
+            throw new BadRequestException(errors);
+        }
         if (id != vehicle.Id)
         {
-            return BadRequest(new { message = "Vehicle ID mismatch."});
+            throw new BadRequestException("Vehicle ID mismatch.");
         }
         var existingVehicle = await _dbContext.Vehicles.FirstOrDefaultAsync(v => !v.IsDeleted && v.Id == id, cancellationToken);
         if (existingVehicle == null)
         {
-            return NotFound(new { message = "Vehicle not found."});
+            throw new NotFoundException("Vehicle not found.");
         }
+
+        // Idempotency: if request body matches current entity, no-op and return 204 (no DB write).
+        if (VehicleDataEquals(existingVehicle, vehicle))
+        {
+            return NoContent();
+        }
+
         existingVehicle.Make = vehicle.Make;
         existingVehicle.Model = vehicle.Model;
         existingVehicle.Year = vehicle.Year;
@@ -156,11 +187,25 @@ public class VehiclesController : ControllerBase
         existingVehicle.CurrentValue = vehicle.CurrentValue;
         existingVehicle.Status = vehicle.Status;
         existingVehicle.UpdatedAt = DateTime.UtcNow;
-
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return NoContent();
     }
+
+    /// <summary>
+    /// Compares updatable fields only (excludes Id, CreatedAt, UpdatedAt, IsDeleted, navigation properties).
+    /// Used to make PUT idempotent when there is no change in data.
+    /// </summary>
+    private static bool VehicleDataEquals(Vehicle existing, Vehicle incoming) =>
+        existing.Make == incoming.Make &&
+        existing.Model == incoming.Model &&
+        existing.Year == incoming.Year &&
+        existing.VIN == incoming.VIN &&
+        existing.LicensePlate == incoming.LicensePlate &&
+        existing.RegistrationDate == incoming.RegistrationDate &&
+        existing.PurchasePrice == incoming.PurchasePrice &&
+        existing.CurrentValue == incoming.CurrentValue &&
+        existing.Status == incoming.Status;
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteVehicleAsync(Guid id, CancellationToken cancellationToken = default)
@@ -168,7 +213,7 @@ public class VehiclesController : ControllerBase
         var existingVehicle = await _dbContext.Vehicles.FirstOrDefaultAsync(v => !v.IsDeleted && v.Id == id, cancellationToken);
         if (existingVehicle == null)
         {
-            return NotFound(new { message = "Vehicle not found."});
+            throw new NotFoundException("Vehicle not found.");
         }
         existingVehicle.IsDeleted = true;
         existingVehicle.UpdatedAt = DateTime.UtcNow;

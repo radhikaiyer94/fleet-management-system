@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using FleetManagementApi.Data;
 using FleetManagementApi.Domain.Entities;
 using FleetManagementApi.Domain.Enums;
+using FleetManagementApi.Exceptions;
 using FleetManagementApi.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -74,29 +75,33 @@ public class AssignmentsController : ControllerBase
     public async Task<IActionResult> GetAssignmentAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var assignment = await _dbContext.Assignments.FirstOrDefaultAsync(a => !a.IsDeleted && a.Id == id, cancellationToken);
-        return assignment != null ? Ok(assignment) : NotFound(new { message = "Assignment not found." });
+        if (assignment == null)
+            throw new NotFoundException("Assignment not found.");
+        return Ok(assignment);
     }
 
     [HttpPost]
     public async Task<IActionResult> CreateAssignmentAsync([FromBody] Assignment assignment, CancellationToken cancellationToken = default)
     {
+        if (!ModelState.IsValid)
+        {
+            var errorList = ModelState
+                .Where(ms => ms.Value?.Errors?.Count > 0)
+                .SelectMany(ms => ms.Value!.Errors.Select(e => $"{ms.Key}: {e.ErrorMessage}"));
+            string error = string.Join("; ", errorList.Where(m => !string.IsNullOrWhiteSpace(m)));
+            throw new BadRequestException(error);
+        }
         var vehicleExists = await _dbContext.Vehicles.AnyAsync(v => v.Id == assignment.VehicleId && !v.IsDeleted, cancellationToken);
         if (!vehicleExists)
-        {
-            return BadRequest(new { message = "Vehicle not found." });
-        }
+            throw new BadRequestException("Vehicle not found.");
 
         var driverExists = await _dbContext.Drivers.AnyAsync(d => d.Id == assignment.DriverId && !d.IsDeleted, cancellationToken);
         if (!driverExists)
-        {
-            return BadRequest(new { message = "Driver not found." });
-        }
+            throw new BadRequestException("Driver not found.");
 
         var errors = await ValidateAssignmentAsync(assignment, null, cancellationToken);
         if (errors.Count > 0)
-        {
-            return BadRequest(new { message = string.Join(", ", errors) });
-        }
+            throw new BadRequestException(string.Join("; ", errors));
 
         if (assignment.Id == default) assignment.Id = Guid.NewGuid();
         assignment.CreatedAt = DateTime.UtcNow;
@@ -111,22 +116,24 @@ public class AssignmentsController : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateAssignmentAsync(Guid id, [FromBody] Assignment assignment, CancellationToken cancellationToken = default)
     {
-        if (id != assignment.Id)
+        if (!ModelState.IsValid)
         {
-            return BadRequest(new { message = "Assignment ID mismatch." });
+            var errorList = ModelState
+                .Where(ms => ms.Value?.Errors?.Count > 0)
+                .SelectMany(ms => ms.Value!.Errors.Select(e => $"{ms.Key}: {e.ErrorMessage}"));
+            string error = string.Join("; ", errorList.Where(m => !string.IsNullOrWhiteSpace(m)));
+            throw new BadRequestException(error);
         }
+        if (id != assignment.Id)
+            throw new BadRequestException("Assignment ID mismatch.");
 
         var existingAssignment = await _dbContext.Assignments.FirstOrDefaultAsync(a => !a.IsDeleted && a.Id == id, cancellationToken);
         if (existingAssignment == null)
-        {
-            return NotFound(new { message = "Assignment not found." });
-        }
+            throw new NotFoundException("Assignment not found.");
 
         var errors = await ValidateAssignmentAsync(assignment, existingAssignment, cancellationToken);
         if (errors.Count > 0)
-        {
-            return BadRequest(new { message = string.Join(", ", errors) });
-        }
+            throw new BadRequestException(string.Join("; ", errors));
 
         existingAssignment.VehicleId = assignment.VehicleId;
         existingAssignment.DriverId = assignment.DriverId;
@@ -146,9 +153,7 @@ public class AssignmentsController : ControllerBase
     {
         var assignment = await _dbContext.Assignments.FirstOrDefaultAsync(a => !a.IsDeleted && a.Id == id, cancellationToken);
         if (assignment == null)
-        {
-            return NotFound(new { message = "Assignment not found." });
-        }
+            throw new NotFoundException("Assignment not found.");
 
         assignment.Status = AssignmentStatus.Completed;
         assignment.EndDate = DateTime.UtcNow;
@@ -164,9 +169,7 @@ public class AssignmentsController : ControllerBase
     {
         var assignment = await _dbContext.Assignments.FirstOrDefaultAsync(a => !a.IsDeleted && a.Id == id, cancellationToken);
         if (assignment == null)
-        {
-            return NotFound(new { message = "Assignment not found." });
-        }
+            throw new NotFoundException("Assignment not found.");
 
         assignment.Status = AssignmentStatus.Cancelled;
         assignment.UpdatedAt = DateTime.UtcNow;
@@ -181,9 +184,7 @@ public class AssignmentsController : ControllerBase
     {
         var existingAssignment = await _dbContext.Assignments.FirstOrDefaultAsync(a => !a.IsDeleted && a.Id == id, cancellationToken);
         if (existingAssignment == null)
-        {
-            return NotFound(new { message = "Assignment not found." });
-        }
+            throw new NotFoundException("Assignment not found.");
 
         existingAssignment.IsDeleted = true;
         existingAssignment.UpdatedAt = DateTime.UtcNow;

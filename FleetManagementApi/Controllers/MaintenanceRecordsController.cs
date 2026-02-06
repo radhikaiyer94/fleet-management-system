@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using FleetManagementApi.Data;
 using FleetManagementApi.Domain.Entities;
+using FleetManagementApi.Exceptions;
 using FleetManagementApi.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -63,17 +64,25 @@ public class MaintenanceRecordsController : ControllerBase
     public async Task<IActionResult> GetMaintenanceRecordAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var record = await _dbContext.MaintenanceRecords.FirstOrDefaultAsync(r => !r.IsDeleted && r.Id == id, cancellationToken);
-        return record != null ? Ok(record) : NotFound(new { message = "Maintenance record not found." });
+        if (record == null)
+            throw new NotFoundException("Maintenance record not found.");
+        return Ok(record);
     }
 
     [HttpPost]
     public async Task<IActionResult> CreateMaintenanceRecordAsync([FromBody] MaintenanceRecord record, CancellationToken cancellationToken = default)
     {
+        if (!ModelState.IsValid)
+        {
+            var errorList = ModelState
+                .Where(ms => ms.Value?.Errors?.Count > 0)
+                .SelectMany(ms => ms.Value!.Errors.Select(e => $"{ms.Key}: {e.ErrorMessage}"));
+            string errors = string.Join("; ", errorList.Where(m => !string.IsNullOrWhiteSpace(m)));
+            throw new BadRequestException(errors);
+        }
         var vehicleExists = await _dbContext.Vehicles.AnyAsync(v => v.Id == record.VehicleId && !v.IsDeleted, cancellationToken);
         if (!vehicleExists)
-        {
-            return BadRequest(new { message = "Vehicle not found." });
-        }
+            throw new BadRequestException("Vehicle not found.");
 
         if (record.Id == default) record.Id = Guid.NewGuid();
         record.CreatedAt = DateTime.UtcNow;
@@ -88,24 +97,26 @@ public class MaintenanceRecordsController : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateMaintenanceRecordAsync(Guid id, [FromBody] MaintenanceRecord record, CancellationToken cancellationToken = default)
     {
-        if (id != record.Id)
+        if (!ModelState.IsValid)
         {
-            return BadRequest(new { message = "Maintenance record ID mismatch." });
+            var errorList = ModelState
+                .Where(ms => ms.Value?.Errors?.Count > 0)
+                .SelectMany(ms => ms.Value!.Errors.Select(e => $"{ms.Key}: {e.ErrorMessage}"));
+            string errors = string.Join("; ", errorList.Where(m => !string.IsNullOrWhiteSpace(m)));
+            throw new BadRequestException(errors);
         }
+        if (id != record.Id)
+            throw new BadRequestException("Maintenance record ID mismatch.");
 
         var existingRecord = await _dbContext.MaintenanceRecords.FirstOrDefaultAsync(r => !r.IsDeleted && r.Id == id, cancellationToken);
         if (existingRecord == null)
-        {
-            return NotFound(new { message = "Maintenance record not found." });
-        }
+            throw new NotFoundException("Maintenance record not found.");
 
         if (record.VehicleId != existingRecord.VehicleId)
         {
             var vehicleExists = await _dbContext.Vehicles.AnyAsync(v => v.Id == record.VehicleId && !v.IsDeleted, cancellationToken);
             if (!vehicleExists)
-            {
-                return BadRequest(new { message = "Vehicle not found." });
-            }
+                throw new BadRequestException("Vehicle not found.");
         }
 
         existingRecord.VehicleId = record.VehicleId;
@@ -127,9 +138,7 @@ public class MaintenanceRecordsController : ControllerBase
     {
         var existingRecord = await _dbContext.MaintenanceRecords.FirstOrDefaultAsync(r => !r.IsDeleted && r.Id == id, cancellationToken);
         if (existingRecord == null)
-        {
-            return NotFound(new { message = "Maintenance record not found." });
-        }
+            throw new NotFoundException("Maintenance record not found.");
 
         existingRecord.IsDeleted = true;
         existingRecord.UpdatedAt = DateTime.UtcNow;

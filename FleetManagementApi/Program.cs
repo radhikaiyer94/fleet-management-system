@@ -14,8 +14,13 @@ builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
         // Ignore circular references (e.g., Vehicle -> MaintenanceRecords -> Vehicle -> ...)
-        // This prevents infinite loops during JSON serialization of EF Core entities
         options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+    })
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        // Disable automatic 400 response for invalid ModelState so our action runs and we
+        // can throw BadRequestException → ApiExceptionHandler returns { "message": "..." }.
+        options.SuppressModelStateInvalidFilter = true;
     });
 
 // Enable API endpoint exploration for Swagger documentation
@@ -43,6 +48,10 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<FleetDbContext>(options =>
     options.UseNpgsql(connectionString));
 
+// Central exception handling: custom exceptions → HTTP status + JSON { "message": "..." }
+builder.Services.AddExceptionHandler<FleetManagementApi.Exceptions.ApiExceptionHandler>();
+builder.Services.AddProblemDetails();
+
 var app = builder.Build();
 
 // ============================================================================
@@ -67,6 +76,9 @@ using (var scope = app.Services.CreateScope())
 // Middleware components are executed in the order they are registered
 // ============================================================================
 
+// Central exception handler (must be early so it catches exceptions from controllers)
+app.UseExceptionHandler();
+
 // Enable Swagger UI only in Development environment
 // Swagger provides interactive API documentation and testing
 if (app.Environment.IsDevelopment())
@@ -86,8 +98,9 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-// Redirect HTTP requests to HTTPS (security best practice)
-app.UseHttpsRedirection();
+// Redirect HTTP to HTTPS (skip in Development when only HTTP is used, to avoid "Failed to determine the https port" warning)
+if (!app.Environment.IsDevelopment())
+    app.UseHttpsRedirection();
 
 // Enable authorization middleware (for future authentication/authorization features)
 app.UseAuthorization();
