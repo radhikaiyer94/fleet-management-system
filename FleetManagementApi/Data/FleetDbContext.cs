@@ -50,6 +50,12 @@ public class FleetDbContext : DbContext
     public DbSet<Assignment> Assignments { get; set; }
 
     /// <summary>
+    /// Collection of users in the system.
+    /// Represents the Users table in the database.
+    /// </summary>
+    public DbSet<User> Users { get; set; }
+
+    /// <summary>
     /// Configures the entity models and their relationships.
     /// This method is called when the model for a derived context is being initialized.
     /// Used to configure entity properties, relationships, and database constraints.
@@ -203,6 +209,26 @@ public class FleetDbContext : DbContext
             // - DriverId (FK) -> Links to Driver
             // - StartDate, EndDate -> Tracks assignment period
             // - Status -> Tracks assignment state (Active, Completed, Cancelled)
+        });
+
+        // ============================================================================
+        // User Entity Configuration
+        // ============================================================================
+        modelBuilder.Entity<User>(entity =>
+        {
+              // Primary key configuration
+              entity.HasKey(e => e.Id);
+
+              // String property configuration
+              entity.Property(e => e.Email)
+                    .IsRequired()                    // Email is mandatory
+                    .HasMaxLength(255);             // Limit to 255 characters (standard email length)
+
+              entity.Property(e => e.PasswordHash)
+                    .IsRequired()                    // Password (hash) is mandatory
+                    .HasMaxLength(500);              // BCrypt hashes ~60 chars; allow headroom
+
+              entity.HasIndex(e => e.Email).IsUnique(); // Ensure email is unique
         });
     }
 }

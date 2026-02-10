@@ -1,6 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using FleetManagementApi.Data;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -52,6 +55,28 @@ builder.Services.AddDbContext<FleetDbContext>(options =>
 builder.Services.AddExceptionHandler<FleetManagementApi.Exceptions.ApiExceptionHandler>();
 builder.Services.AddProblemDetails();
 
+// Configure JWT Authentication
+var jwtSecretKey = builder.Configuration["Jwt:SecretKey"]
+    ?? throw new InvalidOperationException("Jwt:SecretKey is required.");
+var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? string.Empty;
+var jwtAudience = builder.Configuration["Jwt:Audience"] ?? string.Empty;
+
+var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecretKey));
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        IssuerSigningKey = key,
+        ValidIssuer = jwtIssuer,
+        ValidAudience = jwtAudience,
+        ValidateIssuerSigningKey = true,
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+    };
+});
+
 var app = builder.Build();
 
 // ============================================================================
@@ -102,6 +127,8 @@ if (app.Environment.IsDevelopment())
 if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 
+// Authentication (who are you?) then Authorization (what can you do?)
+app.UseAuthentication();
 // Enable authorization middleware (for future authentication/authorization features)
 app.UseAuthorization();
 
