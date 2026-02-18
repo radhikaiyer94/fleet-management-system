@@ -45,3 +45,10 @@ public enum AssignmentStatus
 
     Cancelled
 }
+
+public enum UserRole
+{
+    Admin,
+    FleetManager,
+    Driver
+}

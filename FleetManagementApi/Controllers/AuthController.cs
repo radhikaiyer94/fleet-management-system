@@ -6,8 +6,10 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.IdentityModel.JsonWebTokens;
 using FleetManagementApi.Data;
 using FleetManagementApi.Domain.Entities;
+using FleetManagementApi.Domain.Enums;
 using FleetManagementApi.Exceptions;
 using FleetManagementApi.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace FleetManagementApi.Controllers;
 
@@ -24,6 +26,7 @@ public class AuthController : ControllerBase
         _configuration = configuration;
     }
 
+    [AllowAnonymous]
     [HttpPost("register")]
     public async Task<ActionResult> Register([FromBody] RegisterRequest register)
     {
@@ -45,13 +48,14 @@ public class AuthController : ControllerBase
         var passwordToHash = register.Password.Trim();
         var hashedPassword = BCrypt.Net.BCrypt.HashPassword(passwordToHash);
 
-        // Create new user
+        // Create new user (default role: Driver; Admin/FleetManager can be assigned separately or via seed)
         var newUser = new User
         {
             Id = Guid.NewGuid(),
             UserName = register.Username,
             Email = email,
             PasswordHash = hashedPassword,
+            Role = UserRole.Driver,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -63,6 +67,7 @@ public class AuthController : ControllerBase
         return StatusCode(201, new { id = newUser.Id, email = newUser.Email });
     }
 
+    [AllowAnonymous]
     [HttpPost("login")]
     public async Task<ActionResult> Login([FromBody] LoginRequest loginRequest)
     {
@@ -106,7 +111,8 @@ public class AuthController : ControllerBase
         {
             new(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new(ClaimTypes.Name, user.UserName),
-            new(ClaimTypes.Email, user.Email)
+            new(ClaimTypes.Email, user.Email),
+            new(ClaimTypes.Role, user.Role.ToString())
         };
 
         var descriptor = new SecurityTokenDescriptor

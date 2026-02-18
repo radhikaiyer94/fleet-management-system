@@ -5,9 +5,11 @@ using FleetManagementApi.Domain.Enums;
 using FleetManagementApi.Exceptions;
 using FleetManagementApi.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 
 namespace FleetManagementApi.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class AssignmentsController : ControllerBase
@@ -19,6 +21,7 @@ public class AssignmentsController : ControllerBase
         _dbContext = context;
     }
 
+    [Authorize(Roles = "Admin,FleetManager,Driver")]
     [HttpGet]
     public async Task<IActionResult> GetAssignmentsAsync([FromQuery] GetAssignmentsQuery q, CancellationToken cancellationToken = default)
     {
@@ -62,6 +65,7 @@ public class AssignmentsController : ControllerBase
         return Ok(assignments);
     }
 
+    [Authorize(Roles = "Admin,FleetManager,Driver")]
     [HttpGet("active")]
     public async Task<IActionResult> GetActiveAssignmentsAsync(CancellationToken cancellationToken = default)
     {
@@ -71,6 +75,7 @@ public class AssignmentsController : ControllerBase
         return Ok(activeAssignments);
     }
 
+    [Authorize(Roles = "Admin,FleetManager,Driver")]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetAssignmentAsync(Guid id, CancellationToken cancellationToken = default)
     {
@@ -80,6 +85,7 @@ public class AssignmentsController : ControllerBase
         return Ok(assignment);
     }
 
+    [Authorize(Roles = "Admin,FleetManager")]
     [HttpPost]
     public async Task<IActionResult> CreateAssignmentAsync([FromBody] Assignment assignment, CancellationToken cancellationToken = default)
     {
@@ -113,6 +119,7 @@ public class AssignmentsController : ControllerBase
         return CreatedAtAction(nameof(GetAssignmentAsync), new { id = assignment.Id }, assignment);
     }
 
+    [Authorize(Roles = "Admin,FleetManager")]
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateAssignmentAsync(Guid id, [FromBody] Assignment assignment, CancellationToken cancellationToken = default)
     {
@@ -148,6 +155,8 @@ public class AssignmentsController : ControllerBase
         return NoContent();
     }
 
+
+    [Authorize(Roles = "Admin,FleetManager")]
     [HttpPatch("{id}/complete")]
     public async Task<IActionResult> CompleteAssignmentAsync(Guid id, CancellationToken cancellationToken = default)
     {
@@ -164,6 +173,8 @@ public class AssignmentsController : ControllerBase
         return Ok(assignment);
     }
 
+
+    [Authorize(Roles = "Admin,FleetManager")]
     [HttpPatch("{id}/cancel")]
     public async Task<IActionResult> CancelAssignmentAsync(Guid id, CancellationToken cancellationToken = default)
     {
@@ -179,6 +190,8 @@ public class AssignmentsController : ControllerBase
         return Ok(assignment);
     }
 
+
+    [Authorize(Roles = "Admin")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteAssignmentAsync(Guid id, CancellationToken cancellationToken = default)
     {

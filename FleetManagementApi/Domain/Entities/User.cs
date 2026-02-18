@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using FleetManagementApi.Domain.Enums;
 
 namespace FleetManagementApi.Domain.Entities;
 
@@ -18,6 +19,8 @@ public class User
     [Required]
     [MaxLength(500)]
     public string PasswordHash { get; set; } = string.Empty;
+
+    public UserRole Role { get; set; }
 
     public DateTime CreatedAt { get; set; }
 

@@ -4,9 +4,11 @@ using FleetManagementApi.Domain.Entities;
 using FleetManagementApi.Exceptions;
 using FleetManagementApi.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 
 namespace FleetManagementApi.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class VehiclesController : ControllerBase
@@ -17,6 +19,7 @@ public class VehiclesController : ControllerBase
         _dbContext = context;
     }
 
+    [Authorize(Roles = "Admin,FleetManager,Driver")]
     [HttpGet]
     public async Task<IActionResult> GetVehiclesAsync([FromQuery] GetVehiclesQuery q, CancellationToken cancellationToken = default)
     {
@@ -88,6 +91,7 @@ public class VehiclesController : ControllerBase
         return Ok(vehicles);
     }
 
+    [Authorize(Roles = "Admin,FleetManager,Driver")]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetVehicleAsync(Guid id, CancellationToken cancellationToken = default)
     {
@@ -98,6 +102,7 @@ public class VehiclesController : ControllerBase
         return Ok(vehicle);
     }
 
+    [Authorize(Roles = "Admin,FleetManager,Driver")]
     [HttpGet("{id}/maintenance-records")]
     public async Task<IActionResult> GetVehicleMaintenanceRecordsAsync(Guid id, CancellationToken cancellationToken = default)
     {
@@ -113,6 +118,7 @@ public class VehiclesController : ControllerBase
         return Ok(maintenanceRecords);
     }
 
+    [Authorize(Roles = "Admin,FleetManager,Driver")]
     [HttpGet("{id}/assignments")]
     public async Task<IActionResult> GetVehicleAssignmentsAsync(Guid id, CancellationToken cancellationToken = default)
     {
@@ -128,6 +134,7 @@ public class VehiclesController : ControllerBase
 
     }
 
+    [Authorize(Roles = "Admin,FleetManager")]
     [HttpPost]
     public async Task<IActionResult> CreateVehicleAsync([FromBody] Vehicle vehicle, CancellationToken cancellationToken = default)
     {
@@ -149,6 +156,7 @@ public class VehiclesController : ControllerBase
         return CreatedAtAction(nameof(GetVehicleAsync), new { id = vehicle.Id }, vehicle);
     }
 
+    [Authorize(Roles = "Admin,FleetManager")]
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateVehicleAsync(Guid id, [FromBody] Vehicle vehicle, CancellationToken cancellationToken = default)
     {
@@ -207,6 +215,7 @@ public class VehiclesController : ControllerBase
         existing.CurrentValue == incoming.CurrentValue &&
         existing.Status == incoming.Status;
 
+    [Authorize(Roles = "Admin")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteVehicleAsync(Guid id, CancellationToken cancellationToken = default)
     {

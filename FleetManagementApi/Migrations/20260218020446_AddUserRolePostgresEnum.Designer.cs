@@ -4,6 +4,7 @@ using FleetManagementApi.Data;
 using FleetManagementApi.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,20 +13,18 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FleetManagementApi.Migrations
 {
     [DbContext(typeof(FleetDbContext))]
-    partial class FleetDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260218020446_AddUserRolePostgresEnum")]
+    partial class AddUserRolePostgresEnum
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("ProductVersion", "9.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
-            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "assignment_status", new[] { "active", "cancelled", "completed" });
-            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "driver_status", new[] { "active", "inactive", "suspended" });
-            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "maintenance_type", new[] { "brake_service", "cleaning", "inspection", "oil_change", "other", "repair", "tire_replacement", "washing" });
             NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "user_role", new[] { "admin", "driver", "fleet_manager" });
-            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "vehicle_status", new[] { "available", "not_available", "under_maintenance" });
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("FleetManagementApi.Domain.Entities.Assignment", b =>
@@ -53,8 +52,8 @@ namespace FleetManagementApi.Migrations
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<AssignmentStatus>("Status")
-                        .HasColumnType("assignment_status");
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -113,8 +112,8 @@ namespace FleetManagementApi.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
-                    b.Property<DriverStatus>("Status")
-                        .HasColumnType("driver_status");
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -144,8 +143,8 @@ namespace FleetManagementApi.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
-                    b.Property<MaintenanceType>("MaintenanceType")
-                        .HasColumnType("maintenance_type");
+                    b.Property<int>("MaintenanceType")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("NextServiceDueDate")
                         .HasColumnType("timestamp with time zone");
@@ -246,8 +245,8 @@ namespace FleetManagementApi.Migrations
                     b.Property<DateTime>("RegistrationDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<VehicleStatus>("Status")
-                        .HasColumnType("vehicle_status");
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");

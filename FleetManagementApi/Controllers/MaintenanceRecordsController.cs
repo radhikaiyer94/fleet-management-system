@@ -4,9 +4,11 @@ using FleetManagementApi.Domain.Entities;
 using FleetManagementApi.Exceptions;
 using FleetManagementApi.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 
 namespace FleetManagementApi.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class MaintenanceRecordsController : ControllerBase
@@ -18,6 +20,7 @@ public class MaintenanceRecordsController : ControllerBase
         _dbContext = context;
     }
 
+    [Authorize(Roles = "Admin,FleetManager,Driver")]
     [HttpGet]
     public async Task<IActionResult> GetMaintenanceRecordsAsync([FromQuery] GetMaintenanceRecordsQuery q, CancellationToken cancellationToken = default)
     {
@@ -60,6 +63,7 @@ public class MaintenanceRecordsController : ControllerBase
         return Ok(records);
     }
 
+    [Authorize(Roles = "Admin,FleetManager,Driver")]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetMaintenanceRecordAsync(Guid id, CancellationToken cancellationToken = default)
     {
@@ -69,6 +73,7 @@ public class MaintenanceRecordsController : ControllerBase
         return Ok(record);
     }
 
+    [Authorize(Roles = "Admin,FleetManager")]
     [HttpPost]
     public async Task<IActionResult> CreateMaintenanceRecordAsync([FromBody] MaintenanceRecord record, CancellationToken cancellationToken = default)
     {
@@ -94,6 +99,7 @@ public class MaintenanceRecordsController : ControllerBase
         return CreatedAtAction(nameof(GetMaintenanceRecordAsync), new { id = record.Id }, record);
     }
 
+    [Authorize(Roles = "Admin,FleetManager")]
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateMaintenanceRecordAsync(Guid id, [FromBody] MaintenanceRecord record, CancellationToken cancellationToken = default)
     {
@@ -133,6 +139,7 @@ public class MaintenanceRecordsController : ControllerBase
         return NoContent();
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteMaintenanceRecordAsync(Guid id, CancellationToken cancellationToken = default)
     {

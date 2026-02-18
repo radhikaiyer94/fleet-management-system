@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using FleetManagementApi.Domain.Enums;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -39,6 +40,30 @@ builder.Services.AddSwaggerGen(c =>
         Version = "v1",
         Description = "API for managing fleet vehicles, drivers, and maintenance records"
     });
+
+    // JWT Bearer support: "Authorize" in Swagger UI lets you paste a token; it is sent as Authorization: Bearer <token> on each request
+    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Description = "JWT Authorization header using the Bearer scheme. Enter your token (no \"Bearer \" prefix needed).",
+        Name = "Authorization",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "Bearer"
+    });
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
 });
 
 // ============================================================================
@@ -49,7 +74,12 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
     ?? "Host=localhost;Port=5432;Database=FleetManagementDb;Username=postgres;Password=postgres;";
 
 builder.Services.AddDbContext<FleetDbContext>(options =>
-    options.UseNpgsql(connectionString));
+    options.UseNpgsql(connectionString, npgsqlOptions => npgsqlOptions
+        .MapEnum<UserRole>()
+        .MapEnum<VehicleStatus>()
+        .MapEnum<DriverStatus>()
+        .MapEnum<MaintenanceType>()
+        .MapEnum<AssignmentStatus>()));
 
 // Central exception handling: custom exceptions → HTTP status + JSON { "message": "..." }
 builder.Services.AddExceptionHandler<FleetManagementApi.Exceptions.ApiExceptionHandler>();
@@ -75,6 +105,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
         ValidateAudience = true,
         ValidateLifetime = true,
     };
+});
+
+//Configure Authorization Policies
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("Admin", policy => policy.RequireRole(UserRole.Admin.ToString()));
 });
 
 var app = builder.Build();
@@ -129,7 +165,7 @@ if (!app.Environment.IsDevelopment())
 
 // Authentication (who are you?) then Authorization (what can you do?)
 app.UseAuthentication();
-// Enable authorization middleware (for future authentication/authorization features)
+// Enable authorization middleware (for authentication/authorization features)
 app.UseAuthorization();
 
 // Map controller endpoints to routes

@@ -4,9 +4,11 @@ using FleetManagementApi.Domain.Entities;
 using FleetManagementApi.Exceptions;
 using FleetManagementApi.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 
 namespace FleetManagementApi.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class DriversController : ControllerBase
@@ -18,6 +20,7 @@ public class DriversController : ControllerBase
         _dbContext = context;
     }
 
+    [Authorize(Roles = "Admin,FleetManager,Driver")]
     [HttpGet]
     public async Task<IActionResult> GetDriversAsync([FromQuery] GetDriversQuery q, CancellationToken cancellationToken = default)
     {
@@ -60,6 +63,7 @@ public class DriversController : ControllerBase
         return Ok(drivers);
     }
 
+    [Authorize(Roles = "Admin,FleetManager,Driver")]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetDriverAsync(Guid id, CancellationToken cancellationToken = default)
     {
@@ -71,6 +75,7 @@ public class DriversController : ControllerBase
         return Ok(driver);
     }
 
+    [Authorize(Roles = "Admin,FleetManager,Driver")]
     [HttpGet("{id}/assignments")]
     public async Task<IActionResult> GetDriverAssignmentsAsync(Guid id, CancellationToken cancellationToken = default)
     {
@@ -86,6 +91,7 @@ public class DriversController : ControllerBase
         return Ok(assignments);
     }
 
+    [Authorize(Roles = "Admin,FleetManager")]
     [HttpPost]
     public async Task<IActionResult> CreateDriverAsync([FromBody] Driver driver, CancellationToken cancellationToken = default)
     {
@@ -107,6 +113,7 @@ public class DriversController : ControllerBase
         return CreatedAtAction(nameof(GetDriverAsync), new { id = driver.Id }, driver);
     }
 
+    [Authorize(Roles = "Admin,FleetManager")]
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateDriverAsync(Guid id, [FromBody] Driver driver, CancellationToken cancellationToken = default)
     {
@@ -160,6 +167,7 @@ public class DriversController : ControllerBase
         existing.DateOfEmployment == incoming.DateOfEmployment &&
         existing.Status == incoming.Status;
 
+    [Authorize(Roles = "Admin")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteDriverAsync(Guid id, CancellationToken cancellationToken = default)
     {

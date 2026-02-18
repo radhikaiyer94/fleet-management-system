@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using FleetManagementApi.Domain.Entities;
+using FleetManagementApi.Domain.Enums;
 
 namespace FleetManagementApi.Data;
 
@@ -67,8 +68,8 @@ public class FleetDbContext : DbContext
 
         // ============================================================================
         // Vehicle Entity Configuration
-        // ============================================================================
-        modelBuilder.Entity<Vehicle>(entity =>
+            // ============================================================================
+            modelBuilder.Entity<Vehicle>(entity =>
         {
             // Primary key configuration
             entity.HasKey(e => e.Id);
@@ -229,6 +230,9 @@ public class FleetDbContext : DbContext
                     .HasMaxLength(500);              // BCrypt hashes ~60 chars; allow headroom
 
               entity.HasIndex(e => e.Email).IsUnique(); // Ensure email is unique
+
+              entity.Property(e => e.Role)
+                    .IsRequired();                  // Role is mandatory
         });
     }
 }
