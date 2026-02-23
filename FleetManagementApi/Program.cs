@@ -81,6 +81,10 @@ builder.Services.AddDbContext<FleetDbContext>(options =>
         .MapEnum<MaintenanceType>()
         .MapEnum<AssignmentStatus>()));
 
+// Repositories and services
+builder.Services.AddScoped<FleetManagementApi.Repositories.Interfaces.IVehicleRepository, FleetManagementApi.Repositories.Implementation.VehicleRepository>();
+builder.Services.AddScoped<FleetManagementApi.Services.VehiclesService>();
+
 // Central exception handling: custom exceptions → HTTP status + JSON { "message": "..." }
 builder.Services.AddExceptionHandler<FleetManagementApi.Exceptions.ApiExceptionHandler>();
 builder.Services.AddProblemDetails();
