@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using FleetManagementApi.Domain.Enums;
+using FleetManagementApi.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -81,9 +82,9 @@ builder.Services.AddDbContext<FleetDbContext>(options =>
         .MapEnum<MaintenanceType>()
         .MapEnum<AssignmentStatus>()));
 
-// Repositories and services
-builder.Services.AddScoped<FleetManagementApi.Repositories.Interfaces.IVehicleRepository, FleetManagementApi.Repositories.Implementation.VehicleRepository>();
-builder.Services.AddScoped<FleetManagementApi.Services.VehiclesService>();
+// Repositories and application services (see Extensions/ for registration details)
+builder.Services.AddRepositories();
+builder.Services.AddApplicationServices();
 
 // Central exception handling: custom exceptions → HTTP status + JSON { "message": "..." }
 builder.Services.AddExceptionHandler<FleetManagementApi.Exceptions.ApiExceptionHandler>();

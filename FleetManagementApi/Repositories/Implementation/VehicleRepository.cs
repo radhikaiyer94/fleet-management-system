@@ -17,7 +17,11 @@ public class VehicleRepository : IVehicleRepository
 
     public async Task<Vehicle?> GetVehicleByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await _dbContext.Vehicles.FirstOrDefaultAsync(v => v.Id == id && !v.IsDeleted, cancellationToken);
+        return await _dbContext.Vehicles
+            .Include(v => v.MaintenanceRecords.Where(r => !r.IsDeleted))
+            .Include(v => v.Assignments.Where(a => !a.IsDeleted))
+            .AsSplitQuery() // Avoid cartesian explosion: run separate queries for collections instead of one big JOIN
+            .FirstOrDefaultAsync(v => v.Id == id && !v.IsDeleted, cancellationToken);
     }
 
     public async Task<IReadOnlyList<Vehicle>> GetVehiclesAsync(CancellationToken cancellationToken = default)
@@ -124,6 +128,8 @@ public class VehicleRepository : IVehicleRepository
     public async Task<IReadOnlyList<Assignment>> GetAssignmentsByVehicleIdAsync(Guid vehicleId, CancellationToken cancellationToken = default)
     {
         return await _dbContext.Assignments
+            .Include(a => a.Vehicle)
+            .Include(a => a.Driver)
             .Where(a => a.VehicleId == vehicleId && !a.IsDeleted)
             .ToListAsync(cancellationToken);
     }
